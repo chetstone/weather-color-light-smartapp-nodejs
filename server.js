@@ -159,7 +159,7 @@ function setBulbColor(installedApp, token) {
         command: 'setLevel',
         capability: 'switchLevel',
         component: 'main',
-        arguments: [20]
+        arguments: [30]
       },
       {
         command: 'setColor',
