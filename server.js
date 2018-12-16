@@ -147,7 +147,16 @@ function setBulbColor(installedApp, token) {
 
   weather.getForecast(zipCode)
   .then(function(forecast) {
-    const color = weather.getColorForForecast(forecast, chunks);
+    var color = weather.getColorForForecast(forecast, chunks);
+    var colorCommand = 'setColor';
+    var colorCapability = 'colorControl';
+
+    if (color.hue === 0 && color.saturation === 0) {
+      // white
+      colorCommand = 'setColorTemperature';
+      colorCapability = 'colorTemperature';
+      color = 3000;
+    }
     commands.actuate(deviceId, token, [
       {
         command: 'on',
@@ -159,11 +168,11 @@ function setBulbColor(installedApp, token) {
         command: 'setLevel',
         capability: 'switchLevel',
         component: 'main',
-        arguments: [30]
+        arguments: [20]
       },
       {
-        command: 'setColor',
-        capability: 'colorControl',
+        command: colorCommand,
+        capability: colorCapability,
         component: 'main',
         arguments: [color]
       }
