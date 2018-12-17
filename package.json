@@ -14,6 +14,9 @@
     "test": "NODE_ENV=test ava --verbose",
     "start": "node server.js"
   },
+  "config": {
+    "prettier": "--single-quote  --trailing-comma es5 --print-width 80"
+  },
   "author": "SmartThings",
   "license": "Apache-2.0",
   "dependencies": {

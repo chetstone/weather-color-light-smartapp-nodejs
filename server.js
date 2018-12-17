@@ -37,13 +37,13 @@ app.use(bodyParser.json());
 * request is actually from SmartThings, except for the PING lifecycle
 * request (which occurs as the app is being created).
 */
-app.post('/', function (req, response) {
+app.post('/', function(req, response) {
   // We don't yet have the public key during PING (when the app is created),
   // so no need to verify the signature. All other requests are verified.
-  if (req.body && req.body.lifecycle === "PING" || signatureIsVerified(req)) {
+  if ((req.body && req.body.lifecycle === 'PING') || signatureIsVerified(req)) {
     handleRequest(req, response);
   } else {
-    response.status(401).send("Forbidden");
+    response.status(401).send('Forbidden');
   }
 });
 
@@ -76,22 +76,22 @@ function handleRequest(req, response) {
   let res;
 
   console.log(`${lifecycle} lifecycle. Request body:`);
-  console.log(prettyjson.render(evt, prettyjsonOptions));
+  //console.log(prettyjson.render(evt, prettyjsonOptions));
 
-  switch(lifecycle) {
+  switch (lifecycle) {
     // PING happens during app creation. Purpose is to verify app
     // is alive and is who it says it is.
     case 'PING': {
       let chal = evt.pingData.challenge;
-      response.json({statusCode: 200, pingData: {challenge: chal}});
+      response.json({ statusCode: 200, pingData: { challenge: chal } });
       break;
     }
     // CONFIGURATION happens as user begins to install the app.
     case 'CONFIGURATION': {
       res = stConfig.handle(evt.configurationData);
-      console.log("CONFIGURATION response:");
-      console.log(prettyjson.render({configurationData: res}, prettyjsonOptions));
-      response.json({statusCode: 200, configurationData: res});
+      //console.log("CONFIGURATION response:");
+      //console.log(prettyjson.render({configurationData: res}, prettyjsonOptions));
+      response.json({ statusCode: 200, configurationData: res });
       break;
     }
     // INSTALL happens after a user finishes configuration, and installs the
@@ -101,7 +101,7 @@ function handleRequest(req, response) {
       setBulbColor(evt.installData.installedApp, token);
       createSchedule(evt.installData.installedApp, token);
 
-      response.json({statusCode: 200, installData: {}});
+      response.json({ statusCode: 200, installData: {} });
       break;
     }
     // UPDATE happens when a user updates the configuration of an
@@ -110,18 +110,18 @@ function handleRequest(req, response) {
       let token = evt.updateData.authToken;
       setBulbColor(evt.updateData.installedApp, token);
       createSchedule(evt.updateData.installedApp, token);
-      response.json({statusCode: 200, updateData: {}});
+      response.json({ statusCode: 200, updateData: {} });
       break;
     }
     // UNINSTALL happens when a user uninstalls the app.
     case 'UNINSTALL': {
-      response.json({statusCode: 200, uninstallData: {}});
+      response.json({ statusCode: 200, uninstallData: {} });
       break;
     }
     // EVENT happens when any subscribed-to event or schedule executes.
     case 'EVENT': {
       handleEvent(evt.eventData);
-      response.json({statusCode: 200, eventData: {}});
+      response.json({ statusCode: 200, eventData: {} });
       break;
     }
     default: {
@@ -140,55 +140,58 @@ function handleRequest(req, response) {
 function setBulbColor(installedApp, token) {
   const zipCode = installedApp.config.zipCode[0].stringConfig.value;
   const deviceId = installedApp.config.colorLight[0].deviceConfig.deviceId;
-  const intervalSetting = installedApp.config.forecastInterval[0].stringConfig.value;
+  const intervalSetting =
+    installedApp.config.forecastInterval[0].stringConfig.value;
   console.log(`FORECAST INTERVAL SELECTED IS: ${intervalSetting}`);
 
   const chunks = stConfig.getForecastChunks(intervalSetting);
 
-  weather.getForecast(zipCode)
-  .then(function(forecast) {
-    var color = weather.getColorForForecast(forecast, chunks);
-    var colorCommand = 'setColor';
-    var colorCapability = 'colorControl';
+  weather
+    .getForecast(zipCode)
+    .then(function(forecast) {
+      var color = weather.getColorForForecast(forecast, chunks);
+      var colorCommand = 'setColor';
+      var colorCapability = 'colorControl';
 
-    if (color.hue === 0 && color.saturation === 0) {
-      // white
-      colorCommand = 'setColorTemperature';
-      colorCapability = 'colorTemperature';
-      color = 3000;
-    }
-    commands.actuate(deviceId, token, [
-      {
-        command: 'on',
-        capability: 'switch',
-        component: 'main',
-        arguments: []
-      },
-      {
-        command: 'setLevel',
-        capability: 'switchLevel',
-        component: 'main',
-        arguments: [20]
-      },
-      {
-        command: colorCommand,
-        capability: colorCapability,
-        component: 'main',
-        arguments: [color]
+      if (color.hue === 0 && color.saturation === 0) {
+        // white
+        colorCommand = 'setColorTemperature';
+        colorCapability = 'colorTemperature';
+        color = 3000;
       }
-    ])
-    .then(function() {
-      console.log('successfully sent device commands');
+      commands
+        .actuate(deviceId, token, [
+          {
+            command: 'on',
+            capability: 'switch',
+            component: 'main',
+            arguments: [],
+          },
+          {
+            command: 'setLevel',
+            capability: 'switchLevel',
+            component: 'main',
+            arguments: [20],
+          },
+          {
+            command: colorCommand,
+            capability: colorCapability,
+            component: 'main',
+            arguments: [color],
+          },
+        ])
+        .then(function() {
+          //console.log('successfully sent device commands');
+        })
+        .catch(function(cmdErr) {
+          console.error('Error executing command');
+          console.error(prettyjson.render(cmdErr, prettyjsonOptions));
+        });
     })
-    .catch(function(cmdErr) {
-      console.error('Error executing command');
-      console.error(prettyjson.render(cmdErr, prettyjsonOptions));
-    })
-  })
-  .catch(function(weatherError) {
-    console.error("Error getting current weather conditions:");
-    console.error(prettyjson.render(weatherError, prettyjsonOptions));
-  });
+    .catch(function(weatherError) {
+      console.error('Error getting current weather conditions:');
+      console.error(prettyjson.render(weatherError, prettyjsonOptions));
+    });
 }
 
 /**
@@ -198,29 +201,38 @@ function setBulbColor(installedApp, token) {
  * @param {string} token - The OAuth2 token to create the schedule.
  */
 function createSchedule(installedApp, token) {
-  const scheduleSetting = installedApp.config.scheduleInterval[0].stringConfig.value;
+  const scheduleSetting =
+    installedApp.config.scheduleInterval[0].stringConfig.value;
 
   const scheduleInterval = stConfig.getScheduleInterval(scheduleSetting);
   console.log(`SCHEDULE INTERVAL SELECTED IS: ${scheduleInterval}`);
 
-  scheduling.deleteSchedules(installedApp.installedAppId, stApi, token)
-  .then(function(resp) {
-    // since it's a recurring schedule, no need to get Location's timezone,
-    // just use UTC
-    scheduling.createCron(`0/${scheduleInterval} * * * ? *`, "UTC", installedApp.installedAppId,
-      stApi, token)
-      .then(function(resp) {
-        console.log("Successfully created schedule:");
-        console.log(prettyjson.render(resp, prettyjsonOptions));
-      }).catch(function(createScheduleErr) {
-        console.log("Error creating schedule:");
-        console.log(prettyjson.render(createScheduleErr, prettyjsonOptions));
-      })
-  }).
-  catch(function(deleteScheduleErr) {
-    console.log("Error creating schedule:");
-    console.log(prettyjson.render(deleteScheduleErr, prettyjsonOptions));
-  });
+  scheduling
+    .deleteSchedules(installedApp.installedAppId, stApi, token)
+    .then(function(resp) {
+      // since it's a recurring schedule, no need to get Location's timezone,
+      // just use UTC
+      scheduling
+        .createCron(
+          `0/${scheduleInterval} * * * ? *`,
+          'UTC',
+          installedApp.installedAppId,
+          stApi,
+          token
+        )
+        .then(function(resp) {
+          //console.log("Successfully created schedule:");
+          //console.log(prettyjson.render(resp, prettyjsonOptions));
+        })
+        .catch(function(createScheduleErr) {
+          console.log('Error creating schedule:');
+          console.log(prettyjson.render(createScheduleErr, prettyjsonOptions));
+        });
+    })
+    .catch(function(deleteScheduleErr) {
+      console.log('Error creating schedule:');
+      console.log(prettyjson.render(deleteScheduleErr, prettyjsonOptions));
+    });
 }
 
 /**
@@ -232,12 +244,12 @@ function createSchedule(installedApp, token) {
 function handleEvent(eventData) {
   const eventType = eventData.events[0].eventType;
   const token = eventData.authToken;
-  if ("TIMER_EVENT" === eventType) {
+  if ('TIMER_EVENT' === eventType) {
     let timerEvent = eventData.events[0].timerEvent;
-    console.log(`Received timer event for schedule ${timerEvent.name} at ${timerEvent.time}`);
+    //console.log(`Received timer event for schedule ${timerEvent.name} at ${timerEvent.time}`);
     setBulbColor(eventData.installedApp, token);
   } else {
-    console.error(`This app only expects TIMER_EVENTs. Got ${eventType}`)
+    console.error(`This app only expects TIMER_EVENTs. Got ${eventType}`);
   }
 }
 
