@@ -147,7 +147,7 @@ function setBulbColor(installedApp, token) {
   const chunks = stConfig.getForecastChunks(intervalSetting);
 
   weather
-    .getForecast(zipCode)
+    .getForecast()
     .then(function(forecast) {
       var color = weather.getColorForForecast(forecast, chunks);
       var colorCommand = 'setColor';
